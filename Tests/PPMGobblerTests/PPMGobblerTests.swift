@@ -1,6 +1,18 @@
 import XCTest
 @testable import PPMGobbler
 
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
+
+#if canImport(UIKit)
+import UIKit
+#endif
+
+#if os(macOS)
+import AppKit
+#endif
+
 final class PPMGobblerTests: XCTestCase {
     override func setUp() {
         super.setUp()
@@ -12,6 +24,23 @@ final class PPMGobblerTests: XCTestCase {
             try testFile(file)
         }
 
+        #if canImport(CoreGraphics)
+        for file in TestFile.allCases {
+            try testCGImage(file)
+        }
+        #endif
+
+        #if canImport(UIKit)
+        for file in TestFile.allCases {
+            try testUIImage(file)
+        }
+        #endif
+
+        #if os(macOS)
+        for file in TestFile.allCases {
+            try testNSImage(file)
+        }
+        #endif
     }
     
     func testFile(_ file: TestFile) throws {
@@ -95,5 +124,103 @@ final class PPMGobblerTests: XCTestCase {
             XCTAssertEqual(variantBW, originalBW)
         }
     }
+    
+#if canImport(CoreGraphics)
+    func testCGImage(_ file: TestFile) throws {
+        print("----- Testing \(file) (CGImage) -----")
+        let contents = try Data(contentsOf: file.url)
+
+        switch file.format {
+        case .P1, .P4:
+            let image = try PPMImage<PPMPixelBW>(data: contents)
+            let cgImage = image.cgImage
+            XCTAssertNotNil(cgImage)
+            XCTAssertEqual(cgImage!.width, Int(image.width))
+            XCTAssertEqual(cgImage!.height, Int(image.height))
+            XCTAssertEqual(cgImage!.colorSpace?.name as String?, "kCGColorSpaceDeviceGray")
+            XCTAssertEqual(cgImage!.bitsPerComponent, 8)
+            XCTAssertEqual(cgImage!.bitsPerPixel, 8)
+
+        case .P2, .P5:
+            let image = try PPMImage<PPMPixelGrey>(data: contents)
+            let cgImage = image.cgImage
+            XCTAssertNotNil(cgImage)
+            XCTAssertEqual(cgImage!.width, Int(image.width))
+            XCTAssertEqual(cgImage!.height, Int(image.height))
+            XCTAssertEqual(cgImage!.colorSpace?.name as String?, "kCGColorSpaceDeviceGray")
+            XCTAssertEqual(cgImage!.bitsPerComponent, 8)
+            XCTAssertEqual(cgImage!.bitsPerPixel, 8)
+
+        case .P3, .P6:
+            let image = try PPMImage<PPMPixelRGB>(data: contents)
+            let cgImage = image.cgImage
+            XCTAssertNotNil(cgImage)
+            XCTAssertEqual(cgImage!.width, Int(image.width))
+            XCTAssertEqual(cgImage!.height, Int(image.height))
+            XCTAssertEqual(cgImage!.colorSpace?.name as String?, "kCGColorSpaceDeviceRGB")
+            XCTAssertEqual(cgImage!.bitsPerComponent, 8)
+            XCTAssertEqual(cgImage!.bitsPerPixel, 32)
+        }
     }
+#endif
+
+#if canImport(UIKit)
+    func testUIImage(_ file: TestFile) throws {
+        print("----- Testing \(file) (UIImage) -----")
+        let contents = try Data(contentsOf: file.url)
+
+        switch file.format {
+        case .P1, .P4:
+            let image = try PPMImage<PPMPixelBW>(data: contents)
+            let uiImage = image.uiImage
+            XCTAssertNotNil(uiImage)
+            XCTAssertEqual(Int(image.width), uiImage!.cgImage!.width)
+            XCTAssertEqual(Int(image.height), uiImage!.cgImage!.height)
+
+        case .P2, .P5:
+            let image = try PPMImage<PPMPixelGrey>(data: contents)
+            let uiImage = image.uiImage
+            XCTAssertNotNil(uiImage)
+            XCTAssertEqual(Int(image.width), uiImage!.cgImage!.width)
+            XCTAssertEqual(Int(image.height), uiImage!.cgImage!.height)
+
+        case .P3, .P6:
+            let image = try PPMImage<PPMPixelRGB>(data: contents)
+            let uiImage = image.uiImage
+            XCTAssertNotNil(uiImage)
+            XCTAssertEqual(Int(image.width), uiImage!.cgImage!.width)
+            XCTAssertEqual(Int(image.height), uiImage!.cgImage!.height)
+        }
+    }
+#endif
+
+#if os(macOS)
+    func testNSImage(_ file: TestFile) throws {
+        print("----- Testing \(file) (NSImage) -----")
+        let contents = try Data(contentsOf: file.url)
+
+        switch file.format {
+        case .P1, .P4:
+            let image = try PPMImage<PPMPixelBW>(data: contents)
+            let nsImage = image.nsImage
+            XCTAssertNotNil(nsImage)
+            XCTAssertEqual(CGFloat(image.width), nsImage!.size.width)
+            XCTAssertEqual(CGFloat(image.height), nsImage!.size.height)
+
+        case .P2, .P5:
+            let image = try PPMImage<PPMPixelGrey>(data: contents)
+            let nsImage = image.nsImage
+            XCTAssertNotNil(nsImage)
+            XCTAssertEqual(CGFloat(image.width), nsImage!.size.width)
+            XCTAssertEqual(CGFloat(image.height), nsImage!.size.height)
+
+        case .P3, .P6:
+            let image = try PPMImage<PPMPixelRGB>(data: contents)
+            let nsImage = image.nsImage
+            XCTAssertNotNil(nsImage)
+            XCTAssertEqual(CGFloat(image.width), nsImage!.size.width)
+            XCTAssertEqual(CGFloat(image.height), nsImage!.size.height)
+        }
+    }
+#endif
 }
