@@ -23,3 +23,17 @@ internal extension Array {
         return result
     }
 }
+
+internal extension UInt8 {
+    static let asciiSpace = UInt8(ascii: " ")
+    static let asciiTab = UInt8(ascii: "\t")
+    static let asciiLineFeed = UInt8(ascii: "\n")
+    static let asciiLineReturn = UInt8(ascii: "\r")
+    static let asciiWhitespaces: Set<UInt8> = [
+        .asciiSpace,
+        .asciiTab,
+        .asciiLineFeed,
+        .asciiLineReturn
+    ]
+}
+

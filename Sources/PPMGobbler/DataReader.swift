@@ -37,10 +37,12 @@ internal struct DataReader {
     mutating func skipWhitespaceAndComments() {
         while let b = peekByte() {
             if b == UInt8(ascii: "#") {
-                while let c = readByte(), c != 10, c != 13 {}
-            } else if b == 9 || b == 10 || b == 13 || b == 32 {
+                while let c = readByte(), c != UInt8.asciiLineFeed, c != UInt8.asciiLineReturn {}
+            }
+            else if UInt8.asciiWhitespaces.contains(b) {
                 _ = readByte()
-            } else {
+            }
+            else {
                 break
             }
         }
@@ -50,9 +52,9 @@ internal struct DataReader {
         skipWhitespaceAndComments()
         var readChars = 0
         var val: UInt = 0
-        while let b = peekByte(), b >= 48 && b <= 57 {
+        while let b = peekByte(), b >= UInt8(ascii: "0") && b <= UInt8(ascii: "9") {
             _ = readByte()
-            val = val * 10 + UInt(b - 48)
+            val = val * 10 + UInt(b - UInt8(ascii: "0"))
             readChars += 1
             if readChars >= maxChars { break }
         }

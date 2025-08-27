@@ -20,11 +20,7 @@ public struct PPMFile: Sendable, Equatable {
         self.height = height
         self.levels = format.bitsPerComponent == 1 ? 1 : (requiredLevels ?? format.defaultLevels)
         self.pixels = pixels
-        
-        let nbPixels = width * height * format.numberOfComponents
-        guard pixels.count == width * height * format.numberOfComponents else {
-            fatalError("Invalid pixels count, expect \(nbPixels) (\(width)x\(height)x\(format.numberOfComponents)), got \(pixels.count)")
-        }
+        ensureProperPixelsCount()
     }
 
     public init(data: Data) throws(PPMError) {
@@ -35,12 +31,12 @@ public struct PPMFile: Sendable, Equatable {
         guard reader.readByte() == 80 else { throw PPMError.invalidHeader("Missing 'P' magic") }
         let formatString = reader.readByte()
         switch formatString {
-        case 49: format = .P1
-        case 50: format = .P2
-        case 51: format = .P3
-        case 52: format = .P4
-        case 53: format = .P5
-        case 54: format = .P6
+        case UInt8(ascii: "1"): format = .P1
+        case UInt8(ascii: "2"): format = .P2
+        case UInt8(ascii: "3"): format = .P3
+        case UInt8(ascii: "4"): format = .P4
+        case UInt8(ascii: "5"): format = .P5
+        case UInt8(ascii: "6"): format = .P6
         default: throw PPMError.invalidHeader("Unknown Netpbm format P\(String(describing: formatString))")
         }
                
@@ -104,6 +100,14 @@ public struct PPMFile: Sendable, Equatable {
         }
         
         self.pixels = pixels
+        ensureProperPixelsCount()
+    }
+    
+    private func ensureProperPixelsCount() {
+        let nbPixels = width * height * format.numberOfComponents
+        guard pixels.count == width * height * format.numberOfComponents else {
+            fatalError("Invalid pixels count, expect \(nbPixels) (\(width)x\(height)x\(format.numberOfComponents)), got \(pixels.count)")
+        }
     }
     
     public var data: Data {
