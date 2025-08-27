@@ -41,7 +41,85 @@ public struct PPMImage<T: PPMPixel>: Sendable, Hashable, CustomStringConvertible
             row.map { T.init($0) }
         }
     }
+    
+    public init(data: Data) throws(PPMError) {
+        let parsed = try PPMFile(data: data)
+        
+        switch parsed.format {
+        case .P1, .P4:
+            let pixels: [[T]] = parsed.pixels
+                .map { (value: UInt16) in
+                    let doubleValue: Double = value > 0 ? 0 : 1
+                    return T(r: doubleValue, g: doubleValue, b: doubleValue)
+                }
+                .split(subsequenceSize: Int(parsed.width))
+            
+            try self.init(width: parsed.width, height: parsed.height, data: pixels)
+            
+        case .P2, .P5:
+            let pixels: [[T]] = parsed.pixels
+                .map { (value: UInt16) in
+                    let doubleValue: Double = Double(value) / Double(parsed.levels)
+                    return T(r: doubleValue, g: doubleValue, b: doubleValue)
+                }
+                .split(subsequenceSize: Int(parsed.width))
+            
+            try self.init(width: parsed.width, height: parsed.height, data: pixels)
+            
+        case .P3, .P6:
+            let pixels: [[T]] = parsed.pixels
+                .split(subsequenceSize: 3)
+                .map { (values: [UInt16]) in
+                    let rValue: Double = Double(values[0]) / Double(parsed.levels)
+                    let gValue: Double = Double(values[1]) / Double(parsed.levels)
+                    let bValue: Double = Double(values[2]) / Double(parsed.levels)
+                    return T(r: rValue, g: gValue, b: bValue)
+                }
+                .split(subsequenceSize: Int(parsed.width))
+            
+            try self.init(width: parsed.width, height: parsed.height, data: pixels)
+        }
+    }
+    
+    public func data(format: PPMFormat, levels requiredLevels: UInt16? = nil) -> Data {
+        let levels = requiredLevels ?? format.defaultLevels
+        let doubleLevels = Double(levels)
 
+        var pixels = [UInt16]()
+        pixels.reserveCapacity(Int(width * height * format.numberOfComponents))
+
+        switch format {
+        case .P1, .P4:
+            pixels = data.map { row in
+                row.map {
+                    PPMPixelBW($0).value ? 0 : 1
+                }
+            }.reduce([], +)
+            
+        case .P2, .P5:
+            pixels = data.map { row in
+                row.map {
+                    UInt16((PPMPixelGrey($0).value * doubleLevels).rounded())
+                }
+            }.reduce([], +)
+            
+        case .P3, .P6:
+            pixels = data.map { row in
+                row.map {
+                    let p = PPMPixelRGB($0)
+                    return [
+                        UInt16((p.r * doubleLevels).rounded()),
+                        UInt16((p.g * doubleLevels).rounded()),
+                        UInt16((p.b * doubleLevels).rounded())
+                    ]
+                }.reduce([], +)
+            }.reduce([], +)
+            
+        }
+        
+        return PPMFile(format: format, width: width, height: height, levels: levels, pixels: pixels).data
+    }
+    
     // MARK: Pixels access
     public subscript(x: UInt, y: UInt) -> T {
         get { return data[Int(y)][Int(x)] }
