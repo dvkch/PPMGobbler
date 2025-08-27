@@ -10,4 +10,7 @@ import Foundation
 public enum PPMError: Error, Sendable, Hashable {
     case invalidHeader(_ message: String)
     case mismatchWidthHeightAndContent
+    case unsupportedPixelType
+    case cannotGenerateCGImage
+    case missingCGImage
 }

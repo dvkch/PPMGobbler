@@ -11,7 +11,61 @@ import CoreGraphics
 
 // MARK: Native image conversions
 public extension PPMImage {
-    var cgImage: CoreGraphics.CGImage? {
+    init(cgImage: CoreGraphics.CGImage) throws(PPMError) {
+        let components: Int
+        let colorspace: CGColorSpace
+        let bitmapInfo: CGBitmapInfo
+
+        if T.self == PPMPixelRGB.self {
+            components = 4
+            colorspace = CGColorSpaceCreateDeviceRGB()
+            bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue)
+        }
+        else if T.self == PPMPixelGrey.self || T.self == PPMPixelBW.self {
+            components = 1
+            colorspace = CGColorSpaceCreateDeviceGray()
+            bitmapInfo = CGBitmapInfo(rawValue: 0)
+        }
+        else {
+            throw PPMError.unsupportedPixelType
+        }
+        
+        var rawPixels = [UInt8](repeating: 0, count: Int(cgImage.height * cgImage.width * components))
+        rawPixels.withUnsafeMutableBytes { ptr in
+            if let context = CGContext(
+                data: ptr.baseAddress,
+                width: cgImage.width,
+                height: cgImage.height,
+                bitsPerComponent: 8,
+                bytesPerRow: cgImage.width * components,
+                space: colorspace,
+                bitmapInfo: bitmapInfo.rawValue
+            ) {
+                let rect = CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)
+                context.draw(cgImage, in: rect)
+            }
+        }
+        
+        let pixels: [[T]]
+        switch components {
+        case 1:
+            pixels = rawPixels
+                .map { T(r: Double($0) / 255, g: Double($0) / 255, b: Double($0) / 255) }
+                .split(subsequenceSize: cgImage.width)
+        case 4:
+            pixels = rawPixels
+                .split(subsequenceSize: 4)
+                .map { T(r: Double($0[0]) / 255, g: Double($0[1]) / 255, b: Double($0[2]) / 255) }
+                .split(subsequenceSize: cgImage.width)
+            
+        default:
+            throw PPMError.unsupportedPixelType
+        }
+        
+        try self.init(width: UInt(cgImage.width), height: UInt(cgImage.height), pixels: pixels)
+    }
+
+    func cgImage() throws(PPMError) -> CoreGraphics.CGImage {
         let components: Int
         let colorspace: CGColorSpace
         let bitmapInfo: CGBitmapInfo
@@ -21,7 +75,7 @@ public extension PPMImage {
             components = 4
             colorspace = CGColorSpaceCreateDeviceRGB()
             bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.last.rawValue)
-            pixels = data
+            pixels = self.pixels
                 .reduce([], +)
                 .flatMap { pixel in
                     let r = UInt8(max(0, min(255, pixel.r * 255)))
@@ -34,18 +88,18 @@ public extension PPMImage {
             components = 1
             colorspace = CGColorSpaceCreateDeviceGray()
             bitmapInfo = CGBitmapInfo(rawValue: 0)
-            pixels = data
+            pixels = self.pixels
                 .reduce([], +)
                 .map { pixel in
                     return UInt8(max(0, min(255, pixel.r * 255)))
                 }
         }
         else {
-            fatalError("Unsupported pixel format")
+            throw PPMError.unsupportedPixelType
         }
 
         let providerRef = CGDataProvider(data: Data(pixels) as CFData)!
-        return CGImage(
+        let image = CGImage(
             width: Int(width),
             height: Int(height),
             bitsPerComponent: 8,
@@ -58,6 +112,10 @@ public extension PPMImage {
             shouldInterpolate: true,
             intent: .defaultIntent
         )
+        guard let image else {
+            throw PPMError.cannotGenerateCGImage
+        }
+        return image
     }
 }
 #endif

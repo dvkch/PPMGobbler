@@ -11,17 +11,17 @@ public struct PPMImage<T: PPMPixel>: Sendable, Hashable, CustomStringConvertible
     // MARK: Properties
     public var width: UInt
     public var height: UInt
-    private(set) internal var data: [[T]]
+    private(set) internal var pixels: [[T]]
     
     // MARK: Init
-    public init(width: UInt, height: UInt, data: [[T]]) throws(PPMError) {
+    public init(width: UInt, height: UInt, pixels: [[T]]) throws(PPMError) {
         self.width = width
         self.height = height
-        self.data = data
-        guard height == data.count else {
+        self.pixels = pixels
+        guard height == pixels.count else {
             throw PPMError.mismatchWidthHeightAndContent
         }
-        for row in data {
+        for row in pixels {
             guard width == row.count else {
                 throw PPMError.mismatchWidthHeightAndContent
             }
@@ -31,13 +31,13 @@ public struct PPMImage<T: PPMPixel>: Sendable, Hashable, CustomStringConvertible
     public init(width: UInt, height: UInt, pixel: T) {
         self.width = width
         self.height = height
-        self.data = Array(repeating: Array(repeating: pixel, count: Int(width)), count: Int(height))
+        self.pixels = Array(repeating: Array(repeating: pixel, count: Int(width)), count: Int(height))
     }
     
     public init<U: PPMPixel>(image: PPMImage<U>) {
         self.width = image.width
         self.height = image.height
-        self.data = image.data.map { row in
+        self.pixels = image.pixels.map { row in
             row.map { T.init($0) }
         }
     }
@@ -54,7 +54,7 @@ public struct PPMImage<T: PPMPixel>: Sendable, Hashable, CustomStringConvertible
                 }
                 .split(subsequenceSize: Int(parsed.width))
             
-            try self.init(width: parsed.width, height: parsed.height, data: pixels)
+            try self.init(width: parsed.width, height: parsed.height, pixels: pixels)
             
         case .P2, .P5:
             let pixels: [[T]] = parsed.pixels
@@ -64,7 +64,7 @@ public struct PPMImage<T: PPMPixel>: Sendable, Hashable, CustomStringConvertible
                 }
                 .split(subsequenceSize: Int(parsed.width))
             
-            try self.init(width: parsed.width, height: parsed.height, data: pixels)
+            try self.init(width: parsed.width, height: parsed.height, pixels: pixels)
             
         case .P3, .P6:
             let pixels: [[T]] = parsed.pixels
@@ -77,11 +77,11 @@ public struct PPMImage<T: PPMPixel>: Sendable, Hashable, CustomStringConvertible
                 }
                 .split(subsequenceSize: Int(parsed.width))
             
-            try self.init(width: parsed.width, height: parsed.height, data: pixels)
+            try self.init(width: parsed.width, height: parsed.height, pixels: pixels)
         }
     }
     
-    public func data(format: PPMFormat, levels requiredLevels: UInt16? = nil) -> Data {
+    public func data(format: PPMFormat, levels requiredLevels: UInt16? = nil) throws(PPMError) -> Data {
         let levels = requiredLevels ?? format.defaultLevels
         let doubleLevels = Double(levels)
 
@@ -90,21 +90,21 @@ public struct PPMImage<T: PPMPixel>: Sendable, Hashable, CustomStringConvertible
 
         switch format {
         case .P1, .P4:
-            pixels = data.map { row in
+            pixels = self.pixels.map { row in
                 row.map {
                     PPMPixelBW($0).value ? 0 : 1
                 }
             }.reduce([], +)
             
         case .P2, .P5:
-            pixels = data.map { row in
+            pixels = self.pixels.map { row in
                 row.map {
                     UInt16((PPMPixelGrey($0).value * doubleLevels).rounded())
                 }
             }.reduce([], +)
             
         case .P3, .P6:
-            pixels = data.map { row in
+            pixels = self.pixels.map { row in
                 row.map {
                     let p = PPMPixelRGB($0)
                     return [
@@ -117,21 +117,21 @@ public struct PPMImage<T: PPMPixel>: Sendable, Hashable, CustomStringConvertible
             
         }
         
-        return PPMFile(format: format, width: width, height: height, levels: levels, pixels: pixels).data
+        return try PPMFile(format: format, width: width, height: height, levels: levels, pixels: pixels).data
     }
     
     // MARK: Pixels access
     public subscript(x: UInt, y: UInt) -> T {
-        get { return data[Int(y)][Int(x)] }
-        set { data[Int(y)][Int(x)] = newValue }
+        get { return pixels[Int(y)][Int(x)] }
+        set { pixels[Int(y)][Int(x)] = newValue }
     }
     
     public func row(_ row: UInt) -> [T] {
-        return data[Int(row)]
+        return pixels[Int(row)]
     }
     
     public func col(_ col: UInt) -> [T] {
-        return data.map { $0[Int(col)] }
+        return pixels.map { $0[Int(col)] }
     }
     
     // MARK: Helpers

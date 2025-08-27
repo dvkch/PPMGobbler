@@ -11,8 +11,15 @@ import UIKit
 
 // MARK: Native image conversions
 public extension PPMImage {
-    var uiImage: UIKit.UIImage? {
-        guard let cgImage = self.cgImage else { return nil }
+    init(uiImage: UIImage) throws(PPMError) {
+        guard let cgImage = uiImage.cgImage else {
+            throw PPMError.missingCGImage
+        }
+        try self.init(cgImage: cgImage)
+    }
+
+    func uiImage() throws(PPMError) -> UIKit.UIImage {
+        let cgImage = try self.cgImage()
         return UIImage(cgImage: cgImage)
     }
 }

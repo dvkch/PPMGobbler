@@ -14,13 +14,13 @@ public struct PPMFile: Sendable, Equatable {
     public let levels: UInt16
     public let pixels: [UInt16]
     
-    public init(format: PPMFormat, width: UInt, height: UInt, levels requiredLevels: UInt16? = nil, pixels: [UInt16]) {
+    public init(format: PPMFormat, width: UInt, height: UInt, levels requiredLevels: UInt16? = nil, pixels: [UInt16]) throws(PPMError) {
         self.format = format
         self.width = width
         self.height = height
         self.levels = format.bitsPerComponent == 1 ? 1 : (requiredLevels ?? format.defaultLevels)
         self.pixels = pixels
-        ensureProperPixelsCount()
+        try ensureProperPixelsCount()
     }
 
     public init(data: Data) throws(PPMError) {
@@ -100,13 +100,14 @@ public struct PPMFile: Sendable, Equatable {
         }
         
         self.pixels = pixels
-        ensureProperPixelsCount()
+        try ensureProperPixelsCount()
     }
     
-    private func ensureProperPixelsCount() {
+    private func ensureProperPixelsCount() throws(PPMError) {
         let nbPixels = width * height * format.numberOfComponents
         guard pixels.count == width * height * format.numberOfComponents else {
-            fatalError("Invalid pixels count, expect \(nbPixels) (\(width)x\(height)x\(format.numberOfComponents)), got \(pixels.count)")
+            print("Invalid pixels count, expect \(nbPixels) (\(width)x\(height)x\(format.numberOfComponents)), got \(pixels.count)")
+            throw PPMError.mismatchWidthHeightAndContent
         }
     }
     

@@ -62,7 +62,7 @@ extension TestFile {
         let white   = PPMPixelRGB(r: 1.00, g: 1.00, b: 1.00)
         let gray80  = PPMPixelRGB(r: 0.80, g: 0.80, b: 0.80)
         
-        return try! .init(width: 7, height: 9, data: [
+        return try! .init(width: 7, height: 9, pixels: [
             [red,    orange, yellow, green,  blue,   purple, black],
             [white,  red,    orange, yellow, green,  blue,   purple],
             [black,  white,  red,    orange, yellow, green,  blue],

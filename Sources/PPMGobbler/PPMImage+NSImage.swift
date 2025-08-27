@@ -11,8 +11,16 @@ import AppKit
 
 // MARK: Native image conversions
 public extension PPMImage {
-    var nsImage: AppKit.NSImage? {
-        guard let cgImage = self.cgImage else { return nil }
+    init(nsImage: NSImage) throws(PPMError) {
+        var rect = NSRect(origin: .zero, size: nsImage.size)
+        guard let cgImage = nsImage.cgImage(forProposedRect: &rect, context: nil, hints: nil) else {
+            throw PPMError.missingCGImage
+        }
+        try self.init(cgImage: cgImage)
+    }
+
+    func nsImage() throws(PPMError) -> AppKit.NSImage {
+        let cgImage = try self.cgImage()
         return NSImage(cgImage: cgImage, size: NSSize(width: CGFloat(width), height: CGFloat(height)))
     }
 }
