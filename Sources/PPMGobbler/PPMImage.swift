@@ -9,37 +9,30 @@ import Foundation
 
 public struct PPMImage<T: PPMPixel>: Sendable, Hashable, CustomStringConvertible {
     // MARK: Properties
-    public var width: UInt
-    public var height: UInt
-    private(set) internal var pixels: [[T]]
+    public var width: Int
+    public var height: Int
+    private(set) public var pixels: [T]
     
     // MARK: Init
-    public init(width: UInt, height: UInt, pixels: [[T]]) throws(PPMError) {
+    public init(width: Int, height: Int, pixels: [T]) throws(PPMError) {
         self.width = width
         self.height = height
         self.pixels = pixels
-        guard height == pixels.count else {
+        guard width * height == pixels.count else {
             throw PPMError.mismatchWidthHeightAndContent
-        }
-        for row in pixels {
-            guard width == row.count else {
-                throw PPMError.mismatchWidthHeightAndContent
-            }
         }
     }
     
-    public init(width: UInt, height: UInt, pixel: T) {
+    public init(width: Int, height: Int, pixel: T) {
         self.width = width
         self.height = height
-        self.pixels = Array(repeating: Array(repeating: pixel, count: Int(width)), count: Int(height))
+        self.pixels = Array(repeating: pixel, count: width * height)
     }
     
     public init<U: PPMPixel>(image: PPMImage<U>) {
         self.width = image.width
         self.height = image.height
-        self.pixels = image.pixels.map { row in
-            row.map { T.init($0) }
-        }
+        self.pixels = image.pixels.map { T.init($0) }
     }
     
     public init(data: Data) throws(PPMError) {
@@ -47,27 +40,25 @@ public struct PPMImage<T: PPMPixel>: Sendable, Hashable, CustomStringConvertible
         
         switch parsed.format {
         case .P1, .P4:
-            let pixels: [[T]] = parsed.pixels
+            let pixels: [T] = parsed.pixels
                 .map { (value: UInt16) in
                     let doubleValue: Double = value > 0 ? 0 : 1
                     return T(r: doubleValue, g: doubleValue, b: doubleValue)
                 }
-                .split(subsequenceSize: Int(parsed.width))
             
-            try self.init(width: parsed.width, height: parsed.height, pixels: pixels)
+            try self.init(width: Int(parsed.width), height: Int(parsed.height), pixels: pixels)
             
         case .P2, .P5:
-            let pixels: [[T]] = parsed.pixels
+            let pixels: [T] = parsed.pixels
                 .map { (value: UInt16) in
                     let doubleValue: Double = Double(value) / Double(parsed.levels)
                     return T(r: doubleValue, g: doubleValue, b: doubleValue)
                 }
-                .split(subsequenceSize: Int(parsed.width))
             
-            try self.init(width: parsed.width, height: parsed.height, pixels: pixels)
+            try self.init(width: Int(parsed.width), height: Int(parsed.height), pixels: pixels)
             
         case .P3, .P6:
-            let pixels: [[T]] = parsed.pixels
+            let pixels: [T] = parsed.pixels
                 .split(subsequenceSize: 3)
                 .map { (values: [UInt16]) in
                     let rValue: Double = Double(values[0]) / Double(parsed.levels)
@@ -75,9 +66,8 @@ public struct PPMImage<T: PPMPixel>: Sendable, Hashable, CustomStringConvertible
                     let bValue: Double = Double(values[2]) / Double(parsed.levels)
                     return T(r: rValue, g: gValue, b: bValue)
                 }
-                .split(subsequenceSize: Int(parsed.width))
             
-            try self.init(width: parsed.width, height: parsed.height, pixels: pixels)
+            try self.init(width: Int(parsed.width), height: Int(parsed.height), pixels: pixels)
         }
     }
     
@@ -86,52 +76,46 @@ public struct PPMImage<T: PPMPixel>: Sendable, Hashable, CustomStringConvertible
         let doubleLevels = Double(levels)
 
         var pixels = [UInt16]()
-        pixels.reserveCapacity(Int(width * height * format.numberOfComponents))
+        pixels.reserveCapacity(width * height * Int(format.numberOfComponents))
 
         switch format {
         case .P1, .P4:
-            pixels = self.pixels.map { row in
-                row.map {
-                    PPMPixelBW($0).value ? 0 : 1
-                }
-            }.reduce([], +)
+            pixels = self.pixels.map {
+                PPMPixelBW($0).value ? 0 : 1
+            }
             
         case .P2, .P5:
-            pixels = self.pixels.map { row in
-                row.map {
-                    UInt16((PPMPixelGrey($0).value * doubleLevels).rounded())
-                }
-            }.reduce([], +)
+            pixels = self.pixels.map {
+                UInt16((PPMPixelGrey($0).value * doubleLevels).rounded())
+            }
             
         case .P3, .P6:
-            pixels = self.pixels.map { row in
-                row.map {
-                    let p = PPMPixelRGB($0)
-                    return [
-                        UInt16((p.r * doubleLevels).rounded()),
-                        UInt16((p.g * doubleLevels).rounded()),
-                        UInt16((p.b * doubleLevels).rounded())
-                    ]
-                }.reduce([], +)
+            pixels = self.pixels.map {
+                let p = PPMPixelRGB($0)
+                return [
+                    UInt16((p.r * doubleLevels).rounded()),
+                    UInt16((p.g * doubleLevels).rounded()),
+                    UInt16((p.b * doubleLevels).rounded())
+                ]
             }.reduce([], +)
             
         }
         
-        return try PPMFile(format: format, width: width, height: height, levels: levels, pixels: pixels).data
+        return try PPMFile(format: format, width: UInt(width), height: UInt(height), levels: levels, pixels: pixels).data
     }
     
     // MARK: Pixels access
-    public subscript(x: UInt, y: UInt) -> T {
-        get { return pixels[Int(y)][Int(x)] }
-        set { pixels[Int(y)][Int(x)] = newValue }
+    public subscript(x: Int, y: Int) -> T {
+        get { return pixels[y * width + x] }
+        set { pixels[y * width + x] = newValue }
     }
     
-    public func row(_ row: UInt) -> [T] {
-        return pixels[Int(row)]
+    public func row(_ row: Int) -> [T] {
+        return Array(pixels[row * width ..< (row + 1) * width])
     }
     
-    public func col(_ col: UInt) -> [T] {
-        return pixels.map { $0[Int(col)] }
+    public func col(_ col: Int) -> [T] {
+        return (0..<height).map { y in pixels[y * width + col] }
     }
     
     // MARK: Helpers

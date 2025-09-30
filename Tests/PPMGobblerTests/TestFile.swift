@@ -63,15 +63,15 @@ extension TestFile {
         let gray80  = PPMPixelRGB(r: 0.80, g: 0.80, b: 0.80)
         
         return try! .init(width: 7, height: 9, pixels: [
-            [red,    orange, yellow, green,  blue,   purple, black],
-            [white,  red,    orange, yellow, green,  blue,   purple],
-            [black,  white,  red,    orange, yellow, green,  blue],
-            [purple, black,  white,  red,    orange, yellow, green],
-            [blue,   purple, black,  white,  red,    orange, yellow],
-            [green,  blue,   purple, black,  white,  red,    orange],
-            [yellow, green,  blue,   purple, black,  white,  red],
-            [orange, yellow, green,  blue,   purple, black,  white],
-            [gray80, gray80, gray80, gray80, gray80, gray80, gray80],
+            red,    orange, yellow, green,  blue,   purple, black,
+            white,  red,    orange, yellow, green,  blue,   purple,
+            black,  white,  red,    orange, yellow, green,  blue,
+            purple, black,  white,  red,    orange, yellow, green,
+            blue,   purple, black,  white,  red,    orange, yellow,
+            green,  blue,   purple, black,  white,  red,    orange,
+            yellow, green,  blue,   purple, black,  white,  red,
+            orange, yellow, green,  blue,   purple, black,  white,
+            gray80, gray80, gray80, gray80, gray80, gray80, gray80,
         ])
     }
 }
