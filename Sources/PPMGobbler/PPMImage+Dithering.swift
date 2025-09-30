@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Accelerate
 
 public extension PPMImage where T == PPMPixelGrey {
     // noise: https://surma.dev/things/ditherpunk/
@@ -15,7 +16,7 @@ public extension PPMImage where T == PPMPixelGrey {
         output.reserveCapacity(width * height)
 
         var random = L64X128PRNG()
-        let limit = suggestedLimit ?? buffer.fastAverage
+        let limit = suggestedLimit ?? vDSP.mean(buffer)
 
         func addError(_ error: Double, x: Int, y: Int, dx: Int, dy: Int) {
             let nx = x + dx
