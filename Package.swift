@@ -15,10 +15,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "PPMGobbler",
-            swiftSettings: [
-                .unsafeFlags(["-Osize"], .when(configuration: .debug))
-            ]
+            name: "PPMGobbler"
         ),
         .testTarget(
             name: "PPMGobblerTests",
